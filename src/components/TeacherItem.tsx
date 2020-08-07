@@ -1,42 +1,84 @@
-import React from 'react';
-import {View, Text, StyleSheet, Image} from "react-native";
-import { RectButton } from 'react-native-gesture-handler';
+import React, {useState} from 'react';
+import {View, Text, StyleSheet, Image, Linking} from "react-native";
+import {RectButton} from 'react-native-gesture-handler';
 
 import heartOutlineIcon from '../assets/images/icons/heart-outline.png'
 import unfavoriteIcon from '../assets/images/icons/unfavorite.png'
 import whatsappIcon from '../assets/images/icons/whatsapp.png'
+import AsyncStorage from "@react-native-community/async-storage";
+import api from "../setvices/api";
 
-const TeacherItem: React.FC = () => {
+
+export interface TeacherInterface {
+    name: string;
+    subject: string;
+    avatar: string;
+    cost: string;
+    bio: string;
+    id: string;
+    whatsapp: string;
+}
+
+interface TeacherItemsInterface {
+    teacher: TeacherInterface;
+    favorited: boolean;
+}
+
+
+const TeacherItem: React.FC<TeacherItemsInterface> = ({teacher, favorited}) => {
+    const [isFavorited, setIsFavorited] = useState(favorited);
+
+    function handleLinkToWhatsapp() {
+        api.post('/connections', {user_id:teacher.id})
+        Linking.openURL(`whatsapp://send?phone=${teacher.whatsapp}`)
+    }
+
+    async function handleToggleFavorite() {
+        const favorites = await AsyncStorage.getItem('favorites');
+        let favoritesArray = [];
+        if (favorites){
+            favoritesArray = JSON.parse(favorites);
+        }
+        if (isFavorited) {
+            const favoriteIndex = favoritesArray.findIndex((teacherItem: TeacherInterface) => {
+                return teacherItem.id === teacher.id;
+            });
+            favoritesArray.splice(favoriteIndex, 1);
+            setIsFavorited(false);
+        } else {
+            favoritesArray.push(teacher);
+            setIsFavorited(true);
+        }
+        await AsyncStorage.setItem('favorites', JSON.stringify(favoritesArray));
+    }
+
     return (
         <View style={styles.container}>
             <View style={styles.profile}>
                 <Image style={styles.avatar} source={{
-                    uri: 'https://github.com/cristianvuolo.png'
+                    uri: teacher.avatar
                 }}/>
 
                 <View style={styles.profileInfo}>
-                    <Text style={styles.name}>Cristian Vuolo</Text>
-                    <Text style={styles.subject}>Ciências</Text>
+                    <Text style={styles.name}>{teacher.name}</Text>
+                    <Text style={styles.subject}>{teacher.subject}</Text>
                 </View>
             </View>
             <Text style={styles.bio}>
-                Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium,
-                totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi voluptatem accusantium
-                doloremque
+                {teacher.bio}
             </Text>
             <View style={styles.footer}>
                 <Text style={styles.price}>
                     Preço/hora {'    '}
-                    <Text style={styles.priceValue}>R$ 20,00</Text>
+                    <Text style={styles.priceValue}>R$ {teacher.cost}</Text>
                 </Text>
 
                 <View style={styles.buttonsContainer}>
-                    <RectButton style={[styles.favoriteButton, styles.favorited]}>
-                        {/*<Image source={heartOutlineIcon}/>*/}
-                        <Image source={unfavoriteIcon}/>
+                    <RectButton style={[styles.favoriteButton, isFavorited ? styles.favorited : {}]} onPress={handleToggleFavorite}>
+                        {!isFavorited ? <Image source={heartOutlineIcon}/> : <Image source={unfavoriteIcon}/>}
                     </RectButton>
 
-                    <RectButton style={styles.contactButton}>
+                    <RectButton style={styles.contactButton} onPress={handleLinkToWhatsapp}>
                         <Image source={whatsappIcon}/>
                         <Text style={styles.contactButtonText}>Entrar em Contato</Text>
                     </RectButton>
@@ -69,81 +111,79 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor:'#eee',
+        backgroundColor: '#eee',
     },
     profileInfo: {
-        marginLeft:16,
+        marginLeft: 16,
     },
     name: {
         fontFamily: 'Archivo_700Bold',
-        color:'#32264d',
-        fontSize:20,
+        color: '#32264d',
+        fontSize: 20,
     },
     subject: {
         fontFamily: 'Poppins_400Regular',
         color: '#6a6180',
-        fontSize:12,
-        marginTop:4,
+        fontSize: 12,
+        marginTop: 4,
     },
     bio: {
-        marginHorizontal:24,
+        marginHorizontal: 24,
         fontFamily: 'Poppins_400Regular',
         color: '#6a6180',
-        fontSize:14,
-        lineHeight:24,
+        fontSize: 14,
+        lineHeight: 24,
     },
-    footer:{
-        backgroundColor:'#fafafc',
+    footer: {
+        backgroundColor: '#fafafc',
         padding: 24,
         alignItems: 'center',
-        marginTop:24,
+        marginTop: 24,
     },
-    price:{
+    price: {
         fontFamily: 'Poppins_400Regular',
         color: '#6a6180',
-        fontSize:14,
+        fontSize: 14,
     },
-    priceValue:{
+    priceValue: {
         fontFamily: 'Archivo_700Bold',
         color: '#8257e5',
-        fontSize:16,
+        fontSize: 16,
 
     },
-    buttonsContainer:{
-        flexDirection:'row',
-        fontSize:16,
+    buttonsContainer: {
+        flexDirection: 'row',
+        fontSize: 16,
     },
-    favoriteButton:{
-        backgroundColor:'#8257e5',
-        width:56,
-        height:56,
-        borderRadius:8,
+    favoriteButton: {
+        backgroundColor: '#8257e5',
+        width: 56,
+        height: 56,
+        borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight:8
+        marginRight: 8
     },
 
     favorited: {
-      backgroundColor: '#e33d3d'
+        backgroundColor: '#e33d3d'
     },
-    contactButton:{
-        backgroundColor:'#04d361',
-        flex:1,
-        height:56,
-        borderRadius:8,
-        flexDirection:'row',
+    contactButton: {
+        backgroundColor: '#04d361',
+        flex: 1,
+        height: 56,
+        borderRadius: 8,
+        flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight:8
+        marginRight: 8
     },
-    contactButtonText:{
+    contactButtonText: {
         color: '#fff',
-        fontFamily:'Archivo_700Bold',
-        fontSize:16,
-        marginLeft:16
+        fontFamily: 'Archivo_700Bold',
+        fontSize: 16,
+        marginLeft: 16
     },
-
-
 
 
 })
